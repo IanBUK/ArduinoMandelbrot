@@ -24,16 +24,22 @@ typedef struct rgb
 
 int width = 800;
 int height = 480;
+int screenWidth = 800;
+int screenHeight = 480;
 
-double yMin = -1.5;
-double yMax = 1.5;
-double xMin = -2.5;
-double xMax = 1.5;
+double yMin = -0.4;
+double yMax = 0.4;
+double xMin = -1.7;
+double xMax = -0.6;
 int MaxIterations = 60;
+//const int MAX_MAG_SQUARED = 40;
+//int MaxIterations = 30;
+const int MAX_MAG_SQUARED = 10;
+
 const int colourCount = 60;
 uint16_t colours[colourCount];
 // Work until the magnitude squared > 4.
-const int MAX_MAG_SQUARED = 40;
+
 
 void setup()
 {
@@ -46,18 +52,23 @@ void setup()
     ID = 0x1963;
   }
   tft.begin(ID);
-  pinMode(8, OUTPUT);  //backlight
-  digitalWrite(8, HIGH);//on
-  tft.fillScreen(WHITE);
+  pinMode(A7, OUTPUT);  //backlight
+  digitalWrite(A7, HIGH);//on
+  tft.fillScreen(BLUE);
   createColourArray();
   Serial.println("Calculate Mandelbrot set");
-  Serial.print("("); Serial.print(xMin);Serial.print(", ");Serial.print(yMin);Serial.print(") -> (");
-  Serial.print(xMax);Serial.print(", ");Serial.print(yMax);Serial.println(")");
+  Serial.print("("); Serial.print(xMin); Serial.print(", "); Serial.print(yMin); Serial.print(") -> (");
+  Serial.print(xMax); Serial.print(", "); Serial.print(yMax); Serial.println(")");
+
+  tft.fillRect(0, 0, 200, 200, WHITE);
+  tft.fillRect(200, 0, 200, 200, RED);
+  tft.fillRect(400, 0, 200, 200, GREEN);
+  tft.fillRect(600, 0, 200, 200, BLUE);
   int startTime = millis();
   calculateMandelbrot();
   int endTime = millis();
+  Serial.print("Calculation complete in: "); Serial.print(endTime - startTime); Serial.println("ms");
 
-  Serial.print("Calculation complete in: ");Serial.print(endTime - startTime);Serial.println("ms");
 }
 
 void loop()
@@ -79,31 +90,31 @@ void createColourArray()
   int steps = 10;
   int offset = 0;
   rgb stages[7];
-  stages[0].r = 255; stages[0].g = 0; stages[0].b = 0;
-  stages[1].r = 255; stages[1].g = 255; stages[1].b = 0;
+  stages[0].r = 0; stages[0].g = 0; stages[0].b = 0;
+  stages[1].r = 255; stages[1].g = 0; stages[1].b = 0;
   stages[2].r = 0; stages[2].g = 255; stages[2].b = 0;
-  stages[3].r = 0; stages[3].g = 255; stages[3].b = 255;
-  stages[4].r = 0; stages[4].g = 0; stages[4].b = 255;
-  stages[5].r = 255; stages[5].g = 0; stages[5].b = 255;
-  stages[6].r = 255; stages[6].g = 0; stages[6].b = 0;
+  stages[3].r = 0; stages[3].g = 0; stages[3].b = 255;
+  stages[4].r = 255; stages[4].g = 0; stages[4].b = 0;
+  stages[5].r = 255; stages[5].g = 255; stages[5].b = 0;
+  stages[6].r = 0; stages[6].g = 0; stages[6].b = 0;
 
-  for(int r = 0; r < 6; r++)
+  for (int r = 0; r < 6; r++)
   {
     rgb startCol = stages[r];
-    rgb endCol = stages[r+1];
+    rgb endCol = stages[r + 1];
 
     double rDelta = (double)(endCol.r - startCol.r) / (double)steps;
     double gDelta = (double)(endCol.g - startCol.g) / (double)steps;
     double bDelta = (double)(endCol.b - startCol.b) / (double)steps;
-    
+
     double newRed = startCol.r;
     double newGreen = startCol.g;
     double newBlue = startCol.b;
     for (int i = 0; i < steps; i++)
     {
       colours[offset] = tft.color565((int)newRed, (int)newGreen, (int)newBlue);
-//      Serial.print("colour[");Serial.print(offset);Serial.print("] = (");Serial.print(newRed);Serial.print(", ");
-//        Serial.print(newGreen);Serial.print(", ");Serial.print(newBlue);Serial.println(")");
+      //      Serial.print("colour[");Serial.print(offset);Serial.print("] = (");Serial.print(newRed);Serial.print(", ");
+      //        Serial.print(newGreen);Serial.print(", ");Serial.print(newBlue);Serial.println(")");
       newRed += rDelta;
       newGreen += gDelta;
       newBlue += bDelta;
@@ -117,18 +128,24 @@ void calculateMandelbrot()
 {
   double dReaC = (xMax - xMin) / (width - 1);
   double dImaC = (yMax - yMin) / (height - 1);
-  double Zr =0;
-double Zim = 0;
-double Z2r =0;
-double Z2im = 0;
+  double Zr = 0;
+  double Zim = 0;
+  double Z2r = 0;
+  double Z2im = 0;
+
+  int pixelWidth = (screenWidth/width);
+  int pixelHeight = (screenHeight/height);
   // Calculate the values.
-  
+  int pixelX = 0;
+  int pixelY = 0;
   double ReaC = xMin;
   for (int X = 0; X < width; X++)
   {
+    pixelY = 0;
     double ImaC = yMin;
     for (int Y = 0; Y < height; Y++)
     {
+      
       double ReaZ = Zr;
       double ImaZ = Zim;
       double ReaZ2 = Z2r;
@@ -146,9 +163,12 @@ double Z2im = 0;
 
       uint16_t colour =  colours[clr % colourCount];
       // Set the pixel's value.
-      tft.drawPixel(X, Y,colour);
+      //tft.drawPixel(X, Y,colour);
+      tft.fillRect(pixelX,pixelY,pixelWidth, pixelHeight, colour);
       ImaC += dImaC;
+      pixelY += pixelHeight;
     }
     ReaC += dReaC;
+    pixelX += pixelWidth;
   }
 }
